@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# https://misc.flogisoft.com/bash/tip_colors_and_formatting
 
 __powerline() {
 
@@ -51,6 +52,11 @@ __powerline() {
     readonly REVERSE="\[$(tput rev)\]"
     readonly RESET="\[$(tput sgr0)\]"
     readonly BOLD="\[$(tput bold)\]"
+    readonly BLINK="\[$(tput blink)\]"
+
+    readonly FG_VENV="\[\e[38;5;0m\]"
+    readonly BG_VENV="\[\e[48;5;7m\]"
+    readonly FG_VENV_E="\[\e[38;5;7m\]"
 
     readonly FG_COLOR1="\[\e[38;5;250m\]"
     readonly BG_COLOR1="\[\e[48;5;240m\]"
@@ -82,26 +88,32 @@ __powerline() {
         *)
             readonly PS_SYMBOL=$PS_SYMBOL_OTHER
     esac
-    
+
     # what Server?
     case "$(hostname)" in
-	zbuild)
-		readonly BG_HOSTNAME="$BG_GREEN"
-		readonly FG_HOSTNAME="$FG_GREEN"
-		;;
-	zeus)
-		readonly BG_HOSTNAME="$BG_RED"
-		readonly FG_HOSTNAME="$FG_RED"
-		;;
-	*)
-		readonly BG_HOSTNAME="$BG_COLOR3"
-		readonly FG_HOSTNAME="$FG_COLOR4"
-		;;
+    	zbuild)
+    		readonly BG_HOSTNAME="$BG_GREEN"
+    		readonly FG_HOSTNAME="$FG_GREEN"
+    		;;
+    	zeus)
+    		readonly BG_HOSTNAME="$BG_RED"
+    		readonly FG_HOSTNAME="$FG_RED"
+    		;;
+    	*)
+    		readonly BG_HOSTNAME="$BG_COLOR3"
+    		readonly FG_HOSTNAME="$FG_COLOR4"
+    		;;
     esac
 
-    __git_info() { 
+    # set variable identifying the chroot you work in (used in the prompt below)
+    if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+        debian_chroot=$(cat /etc/debian_chroot)
+    fi
+
+    __git_info() {
         [ -x "$(which git)" ] || return    # git not found
-	[ -d .git ] || return              # no .git directory
+        # [ -d .git ] || return              # no .git directory
+        [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" ] || return
 
         # get current branch name or short SHA1 hash for detached head
         local branch="$(git symbolic-ref --short HEAD 2>/dev/null || git describe --tags --always 2>/dev/null)"
@@ -117,17 +129,28 @@ __powerline() {
         [ -n "$behindN" ] && marks+=" $GIT_NEED_PULL_SYMBOL$behindN"
 
         # print the git branch segment without a trailing newline
-	# branch is modified?
-	if [ -n "$(git status --porcelain)" ]; then
-		printf "${BG_COLOR8}$RESET$BG_COLOR8 $branch$marks $FG_COLOR9"
-	else
-		printf "${BG_BLUE}$RESET$BG_BLUE $branch$marks $RESET$FG_BLUE"
-	fi
+    	# branch is modified?
+    	if [ -n "$(git status --porcelain)" ]; then
+    		printf "${BG_COLOR8}$RESET$BG_COLOR8 $branch$marks $FG_COLOR9"
+    	else
+    		printf "${BG_BLUE}$RESET$BG_BLUE $branch$marks $RESET$FG_BLUE"
+    	fi
     }
 
+    __shorten_pwd() {
+        local PRE= NAME="$1" LENGTH=30;
+        [[ "$NAME" != "${NAME#$HOME/}" || -z "${NAME#$HOME}" ]] && PRE+='~' NAME="${NAME#$HOME}" LENGTH=$[LENGTH-1];
+        ((${#NAME}>$LENGTH)) && NAME="/...${NAME:$[${#NAME}-LENGTH+4]}";
+        echo "$PRE$NAME"
+    }
+
+
     ps1() {
+
+        PS1="\[\e]0;${TERM_TAB_TITLE}\a\]"
+
         # Check the exit code of the previous command and display different
-        # colors in the prompt accordingly. 
+        # colors in the prompt accordingly.
         if [ $? -eq 0 ]; then
             local BG_EXIT="$BG_GREEN"
 	    local FG_EXIT="$FG_GREEN"
@@ -135,22 +158,55 @@ __powerline() {
             local BG_EXIT="$BG_RED"
 	    local FG_EXIT="$FG_RED"
         fi
-	if [ $(id -u) -eq 0 ]; then
-		PS1="$FG_COLOR1$BG_RED \u $FG_RED"
-	else
-		PS1="$FG_COLOR1$BG_COLOR1 \u $FG_COLOR2"
-	fi
-	
 
-	PS1+="$BG_HOSTNAME$FG_COLOR3$BG_HOSTNAME$BOLD \h $RESET$FG_HOSTNAME$BG_COLOR4$FG_COLOR5$BG_COLOR5 \w "
-	PS1+="$RESET${FG_COLOR6}"
-	PS1+="$(__git_info)"
-        PS1+="$BG_EXIT$RESET"
-        PS1+="$BG_EXIT$FG_BASE3 ${PS_SYMBOL} ${RESET}${FG_EXIT}${RESET} "
+        PS1+=`[[ ! -z $VIRTUAL_ENV ]] && echo "$FG_VENV$BG_VENV$BOLD #$(basename ${VIRTUAL_ENV}) "`
+        if [ ! -z $VIRTUAL_ENV ]; then
+            if [ $(id -u) -eq 0 ]; then
+                PS1+="$FG_VENV_E$BG_RED"
+            else
+                PS1+="$FG_VENV_E$BG_COLOR1"
+            fi
+            PS1+="$RESET"
+        fi
 
+        # Check root alert --> username
+    	if [ $(id -u) -eq 0 ]; then
+    		PS1+="$FG_COLOR1$BG_RED ${TERM_USERNAME} $FG_RED"
+    	else
+    		PS1+="$FG_COLOR1$BG_COLOR1 ${TERM_USERNAME} $FG_COLOR2"
+    	fi
+
+        PS1+="$BG_HOSTNAME"
+        PS1+="$FG_COLOR3$BG_HOSTNAME$BOLD ${TERM_HOSTNAME} "
+        PS1+="$RESET"
+
+        PS1+="$FG_HOSTNAME$BG_COLOR4"
+        PS1+="$FG_COLOR5$BG_COLOR5 $(__shorten_pwd $PWD) "
+    	PS1+="$RESET"
+
+        PS1+="$FG_COLOR6$(__git_info)"
+        PS1+="$BG_EXIT"
+        PS1+="$RESET"
+
+        # PS1+="$BG_EXIT$FG_BASE3$BLINK ${PS_SYMBOL} "
+        # PS1+="${RESET}"
+        PS1+="${FG_EXIT}${RESET} "
     }
 
     PROMPT_COMMAND=ps1
+}
+
+export TERM_TAB_TITLE='\u@\h'
+function set-term-title() {
+    export TERM_TAB_TITLE="$*"
+}
+export TERM_USERNAME='\u'
+function set-term-username() {
+    export TERM_USERNAME="$*"
+}
+export TERM_HOSTNAME='\h'
+function set-term-hostname() {
+    export TERM_HOSTNAME="$*"
 }
 
 __powerline
