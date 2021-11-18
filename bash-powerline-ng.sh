@@ -111,6 +111,11 @@ __powerline() {
     fi
 
     __git_info() {
+        if [ -n "$TERM_GIT_STATUS" ]; then
+            printf "${BG_BLUE}$RESET$BG_BLUE $TERM_GIT_STATUS $RESET$FG_BLUE"
+            return
+        fi
+
         [ -x "$(which git)" ] || return    # git not found
         # [ -d .git ] || return              # no .git directory
         [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" ] || return
@@ -200,13 +205,20 @@ export TERM_TAB_TITLE='\u@\h'
 function set-term-title() {
     export TERM_TAB_TITLE="$*"
 }
+
 export TERM_USERNAME='\u'
 function set-term-username() {
     export TERM_USERNAME="$*"
 }
+
 export TERM_HOSTNAME='\h'
 function set-term-hostname() {
     export TERM_HOSTNAME="$*"
+}
+
+export TERM_GIT_STATUS=''
+function set-term-git-status() {
+    export TERM_GIT_STATUS="$*"
 }
 
 __powerline
