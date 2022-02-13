@@ -186,7 +186,7 @@ __powerline() {
         PS1+="$RESET"
 
         PS1+="$FG_HOSTNAME$BG_COLOR4"
-        PS1+="$FG_COLOR5$BG_COLOR5 $(__shorten_pwd $PWD) "
+        PS1+="$FG_COLOR5$BG_COLOR5 $(__shorten_pwd "$PWD") "
     	PS1+="$RESET"
 
         PS1+="$FG_COLOR6$(__git_info)"
