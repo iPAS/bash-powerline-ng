@@ -136,14 +136,16 @@ __powerline() {
         # print the git branch segment without a trailing newline
     	# branch is modified?
     	if [ -n "$(git status --porcelain)" ]; then
-    		printf "${BG_COLOR8}$RESET$BG_COLOR8 $branch$marks $FG_COLOR9"
+            # printf "${BG_COLOR8}$RESET $BG_COLOR8 $branch$marks $FG_COLOR9"
+    		printf "$RESET\n$BG_COLOR8 $branch$marks $FG_COLOR9"
     	else
-    		printf "${BG_BLUE}$RESET$BG_BLUE $branch$marks $RESET$FG_BLUE"
+            # printf "${BG_BLUE}$RESET $BG_BLUE $branch$marks $RESET$FG_BLUE"
+    		printf "$RESET\n$BG_BLUE $branch$marks $RESET$FG_BLUE"
     	fi
     }
 
     __shorten_pwd() {
-        local PRE= NAME="$1" LENGTH=30;
+        local PRE= NAME="$1" LENGTH=50;
         [[ "$NAME" != "${NAME#$HOME/}" || -z "${NAME#$HOME}" ]] && PRE+='~' NAME="${NAME#$HOME}" LENGTH=$[LENGTH-1];
         ((${#NAME}>$LENGTH)) && NAME="/...${NAME:$[${#NAME}-LENGTH+4]}";
         echo "$PRE$NAME"
