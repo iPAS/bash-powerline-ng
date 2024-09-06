@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # https://misc.flogisoft.com/bash/tip_colors_and_formatting
 
+export __GIT_INFO_PROCESS_TIME=0
+function export_git_process_time() {
+    export __GIT_INFO_PROCESS_TIME="$*"
+}
+
 __powerline() {
 
     # Unicode symbols
@@ -191,9 +196,17 @@ __powerline() {
         PS1+="$FG_COLOR5$BG_COLOR5 $(__shorten_pwd "$PWD") "
     	PS1+="$RESET"
 
+        start_time=`date +%s%N`
+
         PS1+="$FG_COLOR6$(__git_info)"
         PS1+="$BG_EXIT"
         PS1+="$RESET"
+
+        end_time=`date +%s%N`
+        export_git_process_time "$((end_time-start_time))"
+        if [ $__GIT_INFO_PROCESS_TIME -gt 500000000 ]; then
+            set-term-git-status '..skp git..'
+        fi
 
         # PS1+="$BG_EXIT$FG_BASE3$BLINK ${PS_SYMBOL} "
         # PS1+="${RESET}"
